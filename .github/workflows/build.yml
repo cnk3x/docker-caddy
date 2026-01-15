@@ -9,25 +9,24 @@ jobs:
     steps:
       - id: get_version
         run: |
-          version=$(curl -s https://api.github.com/repos/caddyserver/caddy/releases/latest | grep -oP '"tag_name": "\K(.*)(?=")')
+          latest_tag=$(curl -s https://api.github.com/repos/caddyserver/caddy/releases/latest | grep -oP '"tag_name": "\K(.*)(?=")')
           echo "version=$latest_tag"
           echo "version=$latest_tag" >> $GITHUB_OUTPUT
 
       - uses: actions/checkout@v6
       - uses: actions/setup-go@v5
-        with: { go-version: "stable", cache: false }
-
-      - uses: actions/cache@v5
-        with:
-          path: ${{ env.GOCACHE }}
-          key: ${{ runner.os }}-go-build-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-build-
+        with: { go-version: "stable" }
 
       - run: go install -v github.com/caddyserver/xcaddy/cmd/xcaddy@latest
 
-      - run: |
-          xcaddy build --output dist/caddy \
+      - name: 编译(amd64)
+        env:
+          CADDY_VERSION: "${{ steps.get_version.outputs.version }}"
+          CGO_ENABLED: "0"
+          GOOS: "linux"
+          GOARCH: "amd64"
+        run: |
+          xcaddy build --output dist/caddy-amd64 \
             --with github.com/mholt/caddy-l4 \
             --with github.com/baldinof/caddy-supervisor \
             --with github.com/invzhi/caddy-docker-upstreams \
@@ -37,7 +36,24 @@ jobs:
             --with github.com/caddy-dns/alidns \
             --with github.com/caddy-dns/godaddy \
             --with magnax.ca/caddy/gopkg
-        env: { CADDY_VERSION: "${{ steps.get_version.outputs.version }}" }
+
+      - name: 编译(arm64)
+        env:
+          CADDY_VERSION: "${{ steps.get_version.outputs.version }}"
+          CGO_ENABLED: "0"
+          GOOS: "linux"
+          GOARCH: "arm64"
+        run: |
+          xcaddy build --output dist/caddy-arm64 \
+            --with github.com/mholt/caddy-l4 \
+            --with github.com/baldinof/caddy-supervisor \
+            --with github.com/invzhi/caddy-docker-upstreams \
+            --with github.com/greenpau/caddy-git \
+            --with github.com/WingLim/caddy-webhook \
+            --with github.com/caddy-dns/cloudflare \
+            --with github.com/caddy-dns/alidns \
+            --with github.com/caddy-dns/godaddy \
+            --with magnax.ca/caddy/gopkg
 
       - uses: docker/setup-qemu-action@v3
       - uses: docker/setup-buildx-action@v3
