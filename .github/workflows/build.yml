@@ -9,7 +9,7 @@ jobs:
     steps:
       - id: get_version
         run: |
-          latest_tag=$(curl -s https://api.github.com/repos/caddyserver/caddy/releases/latest | grep -oP '"tag_name": "\K(.*)(?=")')
+          latest_tag=$(curl -s https://api.github.com/repos/caddyserver/caddy/releases/latest | grep -oP '"tag_name": "\K(.*)(?=")' | sed 's/v//g')
           echo "version=$latest_tag"
           echo "version=$latest_tag" >> $GITHUB_OUTPUT
 
@@ -19,14 +19,15 @@ jobs:
 
       - run: go install -v github.com/caddyserver/xcaddy/cmd/xcaddy@latest
 
-      - name: 编译(amd64)
+      - name: 编译
         env:
           CADDY_VERSION: "${{ steps.get_version.outputs.version }}"
           CGO_ENABLED: "0"
           GOOS: "linux"
           GOARCH: "amd64"
+          XCADDY_GO_BUILD_FLAGS: "-v -ldflags '-w -s' -trimpath -tags nobadger,nomysql,nopgx"
         run: |
-          xcaddy build --output dist/caddy-amd64 \
+          ~/go/bin/xcaddy build --output dist/caddy-amd64 \
             --with github.com/mholt/caddy-l4 \
             --with github.com/baldinof/caddy-supervisor \
             --with github.com/invzhi/caddy-docker-upstreams \
@@ -37,14 +38,15 @@ jobs:
             --with github.com/caddy-dns/godaddy \
             --with magnax.ca/caddy/gopkg
 
-      - name: 编译(arm64)
+      - name: 编译
         env:
           CADDY_VERSION: "${{ steps.get_version.outputs.version }}"
           CGO_ENABLED: "0"
           GOOS: "linux"
           GOARCH: "arm64"
+          XCADDY_GO_BUILD_FLAGS: "-v -ldflags '-w -s' -trimpath -tags nobadger,nomysql,nopgx"
         run: |
-          xcaddy build --output dist/caddy-arm64 \
+          ~/go/bin/xcaddy build --output dist/caddy-arm64 \
             --with github.com/mholt/caddy-l4 \
             --with github.com/baldinof/caddy-supervisor \
             --with github.com/invzhi/caddy-docker-upstreams \
