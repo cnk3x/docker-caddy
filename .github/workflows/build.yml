@@ -97,6 +97,8 @@ jobs:
           username: "${{ secrets.DCR_USER }}"
           password: "${{ secrets.DCR_TOKEN }}"
 
+      - run: ls -lh && ls -lh dist
+
       - name: 构建推送
         uses: docker/build-push-action@v5
         with:
